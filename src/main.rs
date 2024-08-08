@@ -12,6 +12,7 @@ const DEFAULT_PALETTE: [u8; 48] = [
     37, 113, 121, 41, 54, 111, 59, 93, 201, 65, 166, 246, 115, 239, 247, 244, 244, 244, 148, 176,
     194, 86, 108, 134, 51, 60, 87,
 ];
+const PIX_SIZE: f32 = 4.0;
 
 #[derive(Clone, Debug)]
 struct Chunk {
@@ -172,13 +173,6 @@ fn find(from: Vec<Chunk>, name: String) -> bool {
     false
 }
 
-#[derive(Debug, Clone, Copy)]
-struct PaletteColor {
-    r: u8,
-    g: u8,
-    b: u8,
-}
-
 fn split_every(mut what: Vec<u8>, every: u8) -> Vec<Vec<u8>> {
     let mut tmp: Vec<u8> = vec![];
     let mut new: Vec<Vec<u8>> = vec![];
@@ -195,6 +189,17 @@ fn split_every(mut what: Vec<u8>, every: u8) -> Vec<Vec<u8>> {
     }
 
     new.reverse();
+
+    new
+}
+
+fn split_bytes(what: Vec<u8>) -> Vec<u8> {
+    let mut new: Vec<u8> = vec![];
+
+    for i in what.clone() {
+        new.push(i & 0b00001111);
+        new.push((i & 0b11110000) >> 4);
+    }
 
     new
 }
@@ -218,31 +223,39 @@ async fn main() {
     }
 
     let glyphs: Chunk = extract(chunks.clone(), "Tiles".into());
+    let split_glyphs: Vec<u8> = split_bytes(glyphs.data.clone());
+
     let sprites: Chunk = extract(chunks.clone(), "Sprites".into());
     let palette: Chunk = extract(chunks.clone(), "Palette".into());
 
-    let mut colors: Vec<PaletteColor> = vec![];
+    let mut colors: Vec<Color> = vec![];
 
     for i in split_every(palette.data.clone(), 3) {
-        colors.push(PaletteColor {
-            r: i[2],
-            g: i[1],
-            b: i[0],
-        })
+        colors.push(color_u8!(i[2], i[1], i[0], 255))
     }
 
     loop {
         clear_background(BLACK);
 
         for i in 0..colors.len() {
-            let col: PaletteColor = colors[i];
+            draw_rectangle(i as f32 * 20.0, 0.0, 20.0, 20.0, colors[i]);
+        }
+
+        for id in 0..split_glyphs.len() {
+            let big_id = (id as f32 / 64.0).floor();
+
+            let ox = big_id % 16.0 * 8.0;
+            let oy = (big_id / 16.0).floor() * 8.0;
+
+            let px = id as f32 % 8.0;
+            let py = (id as f32 % 64.0 / 8.0).floor();
 
             draw_rectangle(
-                i as f32 * 20.0,
-                0.0,
-                20.0,
-                20.0,
-                color_u8!(col.r, col.g, col.b, 255),
+                (ox + px) * PIX_SIZE,
+                (oy + py) * PIX_SIZE,
+                PIX_SIZE,
+                PIX_SIZE,
+                colors[split_glyphs[id as usize] as usize],
             );
         }
 
