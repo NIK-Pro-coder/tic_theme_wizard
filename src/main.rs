@@ -5,6 +5,8 @@ use std::{
 
 use dirs::home_dir;
 
+use macroquad::prelude::*;
+
 const DEFAULT_PALETTE: [u8; 48] = [
     26, 28, 44, 93, 39, 93, 177, 62, 83, 239, 125, 87, 255, 205, 117, 167, 240, 112, 56, 183, 100,
     37, 113, 121, 41, 54, 111, 59, 93, 201, 65, 166, 246, 115, 239, 247, 244, 244, 244, 148, 176,
@@ -170,9 +172,34 @@ fn find(from: Vec<Chunk>, name: String) -> bool {
     false
 }
 
-fn main() {
-    let mut path_to_conf = home_dir().unwrap();
+#[derive(Debug)]
+struct Color {
+    r: u8,
+    g: u8,
+    b: u8,
+}
 
+fn split_every(mut what: Vec<u8>, every: u8) -> Vec<Vec<u8>> {
+    let mut tmp: Vec<u8> = vec![];
+    let mut new: Vec<Vec<u8>> = vec![];
+
+    for _i in what.clone() {
+        match what.pop() {
+            Some(elem) => tmp.push(elem),
+            None => {}
+        }
+        if tmp.clone().len() >= every.into() {
+            new.push(tmp.clone());
+            tmp.clear();
+        }
+    }
+
+    new
+}
+
+#[macroquad::main("Tic80 Theme Wizard")]
+async fn main() {
+    let mut path_to_conf = home_dir().unwrap();
     path_to_conf.push(".local/share/com.nesbox.tic/TIC-80/.local/b09c50c/config.tic");
 
     let mut chunks: Vec<Chunk> = deconstruct_tic(path_to_conf.to_str().unwrap().into());
@@ -192,7 +219,21 @@ fn main() {
     let sprites: Chunk = extract(chunks.clone(), "Sprites".into());
     let palette: Chunk = extract(chunks.clone(), "Palette".into());
 
-    println!("{:?}", glyphs);
-    println!("{:?}", sprites);
-    println!("{:?}", palette);
+    let mut colors: Vec<Color> = vec![];
+
+    for i in split_every(palette.data.clone(), 3) {
+        colors.push(Color {
+            r: i[0],
+            g: i[1],
+            b: i[2],
+        })
+    }
+
+    println!("{:?}", colors);
+
+    loop {
+        clear_background(BLACK);
+
+        next_frame().await;
+    }
 }
