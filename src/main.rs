@@ -225,7 +225,7 @@ async fn main() {
     let glyphs: Chunk = extract(chunks.clone(), "Tiles".into());
     let split_glyphs: Vec<u8> = split_bytes(glyphs.data.clone());
 
-    let sprites: Chunk = extract(chunks.clone(), "Sprites".into());
+    let _sprites: Chunk = extract(chunks.clone(), "Sprites".into());
     let palette: Chunk = extract(chunks.clone(), "Palette".into());
 
     let mut colors: Vec<Color> = vec![];
@@ -234,29 +234,31 @@ async fn main() {
         colors.push(color_u8!(i[2], i[1], i[0], 255))
     }
 
+    let draw_spr = |spr: Vec<u8>, x: f32, y: f32| {
+        for id in 0..spr.len() {
+            let px = 8.0 - (id as f32 % 8.0);
+            let py = 8.0 - (id as f32 / 8.0).floor();
+
+            draw_rectangle(
+                px * PIX_SIZE + x,
+                py * PIX_SIZE + y,
+                PIX_SIZE,
+                PIX_SIZE,
+                colors[spr[id] as usize],
+            );
+        }
+    };
+
+    let split_glyphs: Vec<Vec<u8>> = split_every(split_glyphs, 64);
+
     loop {
         clear_background(BLACK);
 
-        for i in 0..colors.len() {
-            draw_rectangle(i as f32 * 20.0, 0.0, 20.0, 20.0, colors[i]);
-        }
-
         for id in 0..split_glyphs.len() {
-            let big_id = (id as f32 / 64.0).floor();
+            let sx = (id as f32 % 16.0) * 9.0;
+            let sy = (id as f32 / 16.0).floor() * 9.0;
 
-            let ox = big_id % 16.0 * 8.0;
-            let oy = (big_id / 16.0).floor() * 8.0;
-
-            let px = id as f32 % 8.0;
-            let py = (id as f32 % 64.0 / 8.0).floor();
-
-            draw_rectangle(
-                (ox + px) * PIX_SIZE,
-                (oy + py) * PIX_SIZE,
-                PIX_SIZE,
-                PIX_SIZE,
-                colors[split_glyphs[id as usize] as usize],
-            );
+            draw_spr(split_glyphs[id].clone(), sx * PIX_SIZE, sy * PIX_SIZE);
         }
 
         next_frame().await;
