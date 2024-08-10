@@ -225,7 +225,7 @@ async fn main() {
     let glyphs: Chunk = extract(chunks.clone(), "Tiles".into());
     let split_glyphs: Vec<u8> = split_bytes(glyphs.data.clone());
 
-    let _sprites: Chunk = extract(chunks.clone(), "Sprites".into());
+    let sprites: Chunk = extract(chunks.clone(), "Sprites".into());
     let palette: Chunk = extract(chunks.clone(), "Palette".into());
 
     let mut colors: Vec<Color> = vec![];
@@ -234,32 +234,74 @@ async fn main() {
         colors.push(color_u8!(i[2], i[1], i[0], 255))
     }
 
-    let draw_spr = |spr: Vec<u8>, x: f32, y: f32| {
+    let draw_spr = |spr: Vec<u8>, x: f32, y: f32, trans: u8| {
         for id in 0..spr.len() {
-            let px = 8.0 - (id as f32 % 8.0);
-            let py = 8.0 - (id as f32 / 8.0).floor();
+            let px = 7.0 - (id as f32 % 8.0);
+            let py = 7.0 - (id as f32 / 8.0).floor();
 
-            draw_rectangle(
-                px * PIX_SIZE + x,
-                py * PIX_SIZE + y,
-                PIX_SIZE,
-                PIX_SIZE,
-                colors[spr[id] as usize],
-            );
+            if spr[id] != trans {
+                draw_rectangle(
+                    px * PIX_SIZE + x,
+                    py * PIX_SIZE + y,
+                    PIX_SIZE,
+                    PIX_SIZE,
+                    colors[spr[id] as usize],
+                );
+            }
         }
     };
 
     let split_glyphs: Vec<Vec<u8>> = split_every(split_glyphs, 64);
 
+    let draw_by_id = |id: usize, x: f32, y: f32, trans: u8| {
+        draw_spr(split_glyphs[id].clone(), x, y, trans);
+    };
+
+    let draw_wrapping = |what: Vec<usize>, wrap: i32, x: f32, y: f32, trans: u8| {
+        for id in 0..what.len() {
+            let ox = (id as f32 % wrap as f32) * 8.0;
+            let oy = (id as f32 / wrap as f32).floor() * 8.0;
+
+            draw_by_id(what[id], (x + ox) * PIX_SIZE, (y + oy) * PIX_SIZE, trans);
+        }
+    };
+
+    let create_draw = |what: Vec<usize>, wrap: i32, trans: u8| {
+        return move |x: f32, y: f32| {
+            draw_wrapping(what.clone(), wrap, x, y, trans);
+        };
+    };
+
+    let tics = create_draw(
+        vec![
+            0, 1, 2, 3, 4, 5, 6, 7, 32, 33, 16, 17, 18, 19, 20, 21, 22, 23, 48, 49,
+        ],
+        10,
+        11,
+    );
+
+    let editor_tabs = create_draw((88..=92).collect(), 137, 0);
+    let control_panel = create_draw((80..=84).collect(), 137, 0);
+    let bank_controls = create_draw((85..=86).collect(), 137, 0);
+    let code_controls = create_draw((96..=102).collect(), 137, 0);
+    let map_controls = create_draw((103..=109).collect(), 137, 0);
+    let music_controls = create_draw((114..=120).collect(), 137, 0);
+    let sprite_controls = create_draw((121..=136).collect(), 137, 0);
+
+    let mut tmp = vec![8, 9, 10, 11];
+    tmp.append(&mut vec![24, 25, 26, 27]);
+
+    let arrows = create_draw(tmp, 4, 0);
+
+    tmp = vec![12, 13, 14, 15];
+    tmp.append(&mut vec![28, 29, 30, 31]);
+
+    let buttons = create_draw(tmp, 4, 0);
+
     loop {
         clear_background(BLACK);
 
-        for id in 0..split_glyphs.len() {
-            let sx = (id as f32 % 16.0) * 9.0;
-            let sy = (id as f32 / 16.0).floor() * 9.0;
-
-            draw_spr(split_glyphs[id].clone(), sx * PIX_SIZE, sy * PIX_SIZE);
-        }
+        buttons(0.0, 0.0);
 
         next_frame().await;
     }
