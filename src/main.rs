@@ -272,36 +272,84 @@ async fn main() {
         };
     };
 
-    let tics = create_draw(
-        vec![
-            0, 1, 2, 3, 4, 5, 6, 7, 32, 33, 16, 17, 18, 19, 20, 21, 22, 23, 48, 49,
-        ],
-        10,
-        11,
+    let mut left: Vec<usize> = (0..split_glyphs.len()).collect();
+
+    macro_rules! draw_macro {
+        ($vec_name:ident : $elem:expr => $func_name:ident, $wrap:expr) => {
+            let $vec_name: Vec<usize> = $elem;
+            let $func_name = create_draw($elem, $wrap, 0);
+
+            for i in $elem.clone() {
+                match left.iter().position(|x| *x == i) {
+                    Some(n) => {
+                        left.remove(n);
+                    }
+                    None => {}
+                }
+            }
+        };
+        ($vec_name:ident : $elem:expr => $func_name:ident, $wrap:expr, $trans:expr) => {
+            let $vec_name: Vec<usize> = $elem;
+            let $func_name = create_draw($elem, $wrap, $trans);
+
+            for i in $elem.clone() {
+                match left.iter().position(|x| *x == i) {
+                    Some(n) => {
+                        left.remove(n);
+                    }
+                    None => {}
+                }
+            }
+        };
+    }
+
+    draw_macro!(tic_faces : vec![
+        0, 1, 2, 3, 4, 5, 6, 7, 32, 33, 16, 17, 18, 19, 20, 21, 22, 23, 48, 49
+        ] => tics, 10
     );
 
-    let editor_tabs = create_draw((88..=92).collect(), 137, 0);
-    let control_panel = create_draw((80..=84).collect(), 137, 0);
-    let bank_controls = create_draw((85..=86).collect(), 137, 0);
-    let code_controls = create_draw((96..=102).collect(), 137, 0);
-    let map_controls = create_draw((103..=109).collect(), 137, 0);
-    let music_controls = create_draw((114..=120).collect(), 137, 0);
-    let sprite_controls = create_draw((121..=136).collect(), 137, 0);
+    draw_macro!(editor_vec : (88..=92).collect::<Vec<usize>>() => editor_tabs, 137);
+    draw_macro!(control_vec : (80..=84).collect::<Vec<usize>>() => control_panel, 137);
+    draw_macro!(bank_vec : (85..=86).collect::<Vec<usize>>() => bank_controls, 137);
+    draw_macro!(code_vec : (96..=102).collect::<Vec<usize>>() => code_controls, 137);
+    draw_macro!(map_vec : (103..=109).collect::<Vec<usize>>() => map_controls, 137);
+    draw_macro!(music_vec : vec![114, 115, 116, 117, 118, 119, 120, 137] => music_controls, 137);
+    draw_macro!(sprite_vec : (121..=136).collect::<Vec<usize>>() => sprite_controls, 137);
 
-    let mut tmp = vec![8, 9, 10, 11];
-    tmp.append(&mut vec![24, 25, 26, 27]);
+    draw_macro!(arrow_vec : vec![8, 9, 10, 11, 24, 25, 26, 27] => arrows, 4);
+    draw_macro!(button_vec : vec![12, 13, 14, 15, 28, 29, 30, 31] => buttons, 4);
 
-    let arrows = create_draw(tmp, 4, 0);
+    draw_macro!(piano_keys_vec : vec![39, 40, 41, 42] => piano_keys, 4, 3);
+    draw_macro!(channel_on_vec : vec![36, 52] => channel_on, 4);
 
-    tmp = vec![12, 13, 14, 15];
-    tmp.append(&mut vec![28, 29, 30, 31]);
+    draw_macro!(big_button_vec : (144..=159).collect::<Vec<usize>>() => big_buttons, 2);
+    draw_macro!(big_arrow_vec : vec![
+            194, 195, 196, 197, 198, 199, 200, 201,
+            210, 211, 212, 213, 214, 215, 216, 217,
+            226, 227, 228, 229, 230, 231, 232, 233,
+            242, 243, 244, 245, 246, 247, 248, 249,
+        ] => big_arrows, 8, 16
+    );
+    draw_macro!(keyboard_vec : vec![160, 161, 162, 163, 176, 177, 178, 179] => keyboard, 4, 16);
+    draw_macro!(enter_vec : vec![
+            192, 206, 193,
+            208, 220, 222,
+            34,  221, 222,
+            34,  208, 209,
+            224, 238, 225,
+            240, 252, 222,
+            34,  221, 222,
+            34,  240, 241
+        ] => enter_key, 3
+    );
+    draw_macro!(shift_vec : vec![202, 203, 218, 219, 234, 235, 250, 251] => shift_key, 2, 16);
 
-    let buttons = create_draw(tmp, 4, 0);
+    draw_macro!(misc_vec : left.clone() => misc, 16);
 
     loop {
         clear_background(BLACK);
 
-        buttons(0.0, 0.0);
+        misc(0.0, 0.0);
 
         next_frame().await;
     }
